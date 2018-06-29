@@ -1,0 +1,28 @@
+Jack Briones
+SURF 2018
+Alvarez
+
+
+FILES:
+grabber.py - 
+    Basic script to pull text from a file which is specified at compile time.
+    This script implements two basic keyword extraction methods: POS tagging and
+    selectivity. The POS tagging approach selects the most frequent nouns, while
+    the selectivity approach chooses words based on adjacency within a sentence.
+    In both cases, stopwords are removed, but this really only effects the
+    selectivity approach, because the POS tagging only selects nouns anyway.
+
+twitter_as_data.txt -
+    Section 1 of the Twitter as Data article by Professor Alvarez. Medium-sized
+    text file for testing. Note that at this point, this is mainly for error
+    checking, as only including the first section will eliminate some potential
+    keywords occurring in other sections.
+
+
+
+
+MOVING FORWARD:
+    - consider adding other word types to the POS approach
+    - deal with punctuation in a sentence (possibly split it into two different
+        sentences?
+    - implement other approaches, now that the basics are implemented
