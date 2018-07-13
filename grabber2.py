@@ -111,7 +111,7 @@ bigrams_fd = nltk.FreqDist(bigrams)
 trigrams_fd = nltk.FreqDist(trigrams)
 
 # set the number of keywords to extract from each method
-num_kw = 50
+num_kw = int(raw_input("Enter desired number of keywords for each type: "))
 
 # Get the most common of each:
 if not write_file:

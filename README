@@ -25,6 +25,17 @@ grabber2.py -
 
     I'm going to see what I can do to speed it up, but for now just be aware of
     the amount of data.
+    
+    fixUTF has the following definition:
+
+        fixUTF <- function(tweet){
+            tweetInt <- utf8ToInt(tweet)
+            probInt <- which(tweetInt > 127)
+            if(length(probInt) > 0){
+                tweetInt <- tweetInt[-probInt]
+            }
+            return(intToUtf8(tweetInt))
+        }
 
 twitter_as_data.txt -
     Section 1 of the Twitter as Data article by Professor Alvarez. Medium-sized
