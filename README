@@ -12,6 +12,20 @@ grabber.py -
     In both cases, stopwords are removed, but this really only effects the
     selectivity approach, because the POS tagging only selects nouns anyway.
 
+grabber2.py -
+    Similar to grabber.py, with a different input file. The file should be a csv
+    containing the full content of tweets, minus any non-ascii characters. Note
+    that this is currently very slow for large datasets. It took a few minutes
+    to run on 10,000 tweets. This correlates to the size of the .csv file, not
+    just how many tweets within the file we eliminate. For this reason, the file
+    was generated with:
+
+        > dat <- readRDS(rds_file)
+        > write.csv(lapply(dat$full_content[1:10000], fixUTF), csv_file)
+
+    I'm going to see what I can do to speed it up, but for now just be aware of
+    the amount of data.
+
 twitter_as_data.txt -
     Section 1 of the Twitter as Data article by Professor Alvarez. Medium-sized
     text file for testing. Note that at this point, this is mainly for error
@@ -23,6 +37,6 @@ twitter_as_data.txt -
 
 MOVING FORWARD:
     - consider adding other word types to the POS approach
-    - deal with punctuation in a sentence (possibly split it into two different
-        sentences?
+    - deal with parentheticals in a sentence (possibly split it into two
+        different sentences?
     - implement other approaches, now that the basics are implemented
