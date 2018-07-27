@@ -43,7 +43,7 @@ def get_data(positions):
     data = {}
     for word in positions:
         p = positions[word]
-        data[word] = [min(p), max(p), max(p) - min(p), np.var(p)]
+        data[word] = [min(p), max(p), max(p) - min(p), np.var(p, ddof=1)]
 
     return data
 
@@ -76,10 +76,13 @@ if __name__ == "__main__":
     idx = 3
     if args.span:
         idx = 2
+        print 'span'
     elif args.maxi:
         idx = 1
+        print 'maximum'
     elif args.mini:
         idx = 0
+        print 'minimum'
 
     final = [(word, data[word][idx]) for word in data]
     final.sort(key = lambda x: x[1])
