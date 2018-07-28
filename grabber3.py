@@ -160,30 +160,31 @@ def tf_idf(tweet_list, num_kw):
 # NOTE: text should be in unicode format. Depending on our sources, I'll look
 #       into format conversions.
 
+if __name__ == "__main__":
 # Get the name of the CSV file containing the tweets
-file_name = raw_input("Enter file name: ")
-if not file_name: file_name = "../june_5/ca_j5_remote.csv"
+    file_name = raw_input("Enter file name: ")
+    if not file_name: file_name = "../june_5/ca_j5_remote.csv"
 
 # Decide between saving results and printing results
-save_results = raw_input("Would you like to save the results? [y/n]: ")
-write_file = False
-write_handle = 0
-csv_writer = 0
-if save_results == "y":
-    write_file = True
-    write_file_name = raw_input("Specify the file for writing: ")
-    write_handle = codecs.open(write_file_name, 'wb', 'utf-8')
-    csv_writer = csv.writer(write_handle)
+    save_results = raw_input("Would you like to save the results? [y/n]: ")
+    write_file = False
+    write_handle = 0
+    csv_writer = 0
+    if save_results == "y":
+        write_file = True
+        write_file_name = raw_input("Specify the file for writing: ")
+        write_handle = codecs.open(write_file_name, 'wb', 'utf-8')
+        csv_writer = csv.writer(write_handle)
 
 # Get the tweets
-tweets = get_tweets(file_name)
+    tweets = get_tweets(file_name)
 
 # remove hashtags, URLs, and mentions here
 #               Note: these can easily be condensed into one regular expression,
 #               but for now I will leave them separate for easy testing purposes
-mention_form = re.compile('@\\S+')
-url_form = re.compile('http\\S+')
-hashtag_form = re.compile('#\\S+')
+    mention_form = re.compile('@\\S+')
+    url_form = re.compile('http\\S+')
+    hashtag_form = re.compile('#\\S+')
 # https://stackoverflow.com/a/33417311
 # TODO: this doesn't work right now, I'm not sure why. will do some digging.
 # emoji_form = re.compile("["
@@ -193,180 +194,180 @@ hashtag_form = re.compile('#\\S+')
 #         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
 #                            "]+", flags=re.UNICODE | re.VERBOSE)
 
-tweets = re_filter(tweets, [mention_form, url_form, hashtag_form])
+    tweets = re_filter(tweets, [mention_form, url_form, hashtag_form])
 
 # Introduce default stopwords
-stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words('english'))
 
 # Let user define some of their own stop words
-print("Enter any additional stop words, one at a time. Press enter \
-when you are finished. Limit to n-grams with n at most 3. ")
-while (True):
-    new_word = raw_input("Add a stop word: ")
-    if not new_word:
-        break
-    stop_words.add(new_word.lower())
-print 
+    print("Enter any additional stop words, one at a time. Press enter \
+    when you are finished. Limit to n-grams with n at most 3. ")
+    while (True):
+        new_word = raw_input("Add a stop word: ")
+        if not new_word:
+            break
+        stop_words.add(new_word.lower())
+    print 
 
-fraud_words = ["election fraud", "election manipulation", "illegal voters",
-                "illegal votes", "dead voters", "noncitizen voting",
-                "noncitizen votes", "illegal voting", "illegal vote",
-                "illegal ballot", "illegal ballots", "dirty voter rolls",
-                "vote illegally", "voting illegally", "voter intimidation",
-                "voter suppression", "rigged election", "vote rigging",
-                "voter fraud", "voting fraud", "vote buying", "vote flipping",
-                "flipped votes", "voter coercion", "ballot stuffing",
-                "ballot box stuffing", "ballot destruction",
-                "voting machine tampering", "rigged voting machines",
-                "voter impersonation", "election integrity", "election rigging",
-                "duplicate voting", "duplicate vote", "ineligible voting",
-                "ineligible vote"]
-electionDay_words = ["provisional ballot", "voting machine", "ballot"]
-pollingPlaces_words = ["polling place line", "precinct line", "pollworker",
-                        "poll worker"]
-remoteVoting_words = ["absentee ballot", "mail ballot", "vote by mail",
-                        "voting by mail", "early voting"]
-voterID_words = ["voter identification", "voting identification", "voter id"]
-track_words = fraud_words + electionDay_words + pollingPlaces_words + \
-                remoteVoting_words + voterID_words
+    fraud_words = ["election fraud", "election manipulation", "illegal voters",
+                    "illegal votes", "dead voters", "noncitizen voting",
+                    "noncitizen votes", "illegal voting", "illegal vote",
+                    "illegal ballot", "illegal ballots", "dirty voter rolls",
+                    "vote illegally", "voting illegally", "voter intimidation",
+                    "voter suppression", "rigged election", "vote rigging",
+                    "voter fraud", "voting fraud", "vote buying", "vote flipping",
+                    "flipped votes", "voter coercion", "ballot stuffing",
+                    "ballot box stuffing", "ballot destruction",
+                    "voting machine tampering", "rigged voting machines",
+                    "voter impersonation", "election integrity", "election rigging",
+                    "duplicate voting", "duplicate vote", "ineligible voting",
+                    "ineligible vote"]
+    electionDay_words = ["provisional ballot", "voting machine", "ballot"]
+    pollingPlaces_words = ["polling place line", "precinct line", "pollworker",
+                            "poll worker"]
+    remoteVoting_words = ["absentee ballot", "mail ballot", "vote by mail",
+                            "voting by mail", "early voting"]
+    voterID_words = ["voter identification", "voting identification", "voter id"]
+    track_words = fraud_words + electionDay_words + pollingPlaces_words + \
+                    remoteVoting_words + voterID_words
 
 # list of all phrases to remove
-stop_words = set.union(stop_words, set(track_words))
+    stop_words = set.union(stop_words, set(track_words))
 
 # list of POS tags to remove
-removal = set(['.', 'NUM'])
+    removal = set(['.', 'NUM'])
 
 # remove stop phrases
-print 'Removing stop phrases'
-tweets = remove_stops(tweets, stop_words)
+    print 'Removing stop phrases'
+    tweets = remove_stops(tweets, stop_words)
 
-if GRAMS:
-    # Parse the tweets into sentences
-    sents = get_sents(tweets)
+    if GRAMS:
+        # Parse the tweets into sentences
+        sents = get_sents(tweets)
 
-    # Parse each sentence into words.
-    words = [word_tokenize(s) for s in sents]
+        # Parse each sentence into words.
+        words = [word_tokenize(s) for s in sents]
 
-    # Create list for POS-tagged words
-    words_tagged = []
+        # Create list for POS-tagged words
+        words_tagged = []
 
-    for i in range(len(words)):
-        # Perform POS tagging
-        tagged = nltk.pos_tag(words[i], tagset='universal')
-        # Remove punctuation and numbers
-        # TODO: fix punctuation. it seems like the unicode apostrophe gets through
-        #       the filter, even though the ' character is successfully removed.
-        words[i] = [w[0] for w in tagged if not w[1] in removal]
-        words_tagged += [w for w in tagged if not w[1] in removal]
+        for i in range(len(words)):
+            # Perform POS tagging
+            tagged = nltk.pos_tag(words[i], tagset='universal')
+            # Remove punctuation and numbers
+            # TODO: fix punctuation. it seems like the unicode apostrophe gets through
+            #       the filter, even though the ' character is successfully removed.
+            words[i] = [w[0] for w in tagged if not w[1] in removal]
+            words_tagged += [w for w in tagged if not w[1] in removal]
 
-    # Sort the text into n-grams, one sentence at a time.
-    ngrams = []
-    for sentence in words:
-        # unigrams, bigrams, and trigrams - change max_len to get more or less.
-        ngrams += list(nltk.everygrams(sentence, max_len = 3))
+        # Sort the text into n-grams, one sentence at a time.
+        ngrams = []
+        for sentence in words:
+            # unigrams, bigrams, and trigrams - change max_len to get more or less.
+            ngrams += list(nltk.everygrams(sentence, max_len = 3))
 
-    # ngrams includes all types of n-grams. get lists for each type as well.
-    unigrams = [n for n in ngrams if len(n) == 1]
-    bigrams = [n for n in ngrams if len(n) == 2 and not n[0][0] + " " + n[1][0] in track_words]
-    trigrams = [n for n in ngrams if len(n) == 3 and not n[0][0] + " " + n[1][0] + " " + n[2][0] in track_words]
+        # ngrams includes all types of n-grams. get lists for each type as well.
+        unigrams = [n for n in ngrams if len(n) == 1]
+        bigrams = [n for n in ngrams if len(n) == 2 and not n[0][0] + " " + n[1][0] in track_words]
+        trigrams = [n for n in ngrams if len(n) == 3 and not n[0][0] + " " + n[1][0] + " " + n[2][0] in track_words]
 
-    # Get the frequency distribution of each
-    ngrams_fd = nltk.FreqDist(ngrams)
-    unigrams_fd = nltk.FreqDist(unigrams)
-    bigrams_fd = nltk.FreqDist(bigrams)
-    trigrams_fd = nltk.FreqDist(trigrams)
+        # Get the frequency distribution of each
+        ngrams_fd = nltk.FreqDist(ngrams)
+        unigrams_fd = nltk.FreqDist(unigrams)
+        bigrams_fd = nltk.FreqDist(bigrams)
+        trigrams_fd = nltk.FreqDist(trigrams)
 
 # set the number of keywords to extract from each method
-num_kw = int(raw_input("Enter desired number of keywords for each type: "))
+    num_kw = int(raw_input("Enter desired number of keywords for each type: "))
 
 # Get the most common of each:
-if not write_file:
-    if UNIGRAM:
-        print str(num_kw) + " most common unigrams:"
-        # print len(unigrams_fd)
-        for w in unigrams_fd.most_common(num_kw):
-            # w has the form ((5,),5)
-            print w[0][0]
-else:
-    csv_writer.writerow([str(num_kw) + " most common unigrams"] + [w[0][0]
-    for w in unigrams_fd.most_common(num_kw)])
+    if not write_file:
+        if UNIGRAM:
+            print str(num_kw) + " most common unigrams:"
+            # print len(unigrams_fd)
+            for w in unigrams_fd.most_common(num_kw):
+                # w has the form ((5,),5)
+                print w[0][0]
+    else:
+        csv_writer.writerow([str(num_kw) + " most common unigrams"] + [w[0][0]
+        for w in unigrams_fd.most_common(num_kw)])
 
-if NOUN:
-    nouns = [w[0] for w in words_tagged if w[1] == 'NOUN']
-    nouns_fd = nltk.FreqDist(nouns)
-if not write_file:
     if NOUN:
-        print "\n" + str(num_kw) + " most common nouns:"
-        # print len(nouns_fd)
-        for w in nouns_fd.most_common(num_kw):
-            # w has form (5, 5)
-            print w[0]
-else:
-    csv_writer.writerow([str(num_kw) + " most common nouns"] + [w[0]
-    for w in nouns_fd.most_common(num_kw)])
-
-if not write_file:
-    if BIGRAM:
-        print "\n" + str(num_kw) + " most common bigrams:"
-        # print len(bigrams_fd)
-        for w in bigrams_fd.most_common(num_kw):
-            # w has for ((5,5),5)
-            print w[0][0] + " " + w[0][1]
-else:
-    csv_writer.writerow([str(num_kw) + " most common bigrams"] + [w[0][0] + " " + w[0][1]
-    for w in bigrams_fd.most_common(num_kw)])
-
-if not write_file:
-    if TRIGRAM:
-        print "\n" + str(num_kw) + " most common trigrams:"
-        # print len(trigrams_fd)
-        for w in trigrams_fd.most_common(num_kw):
-            print w[0][0] + " " + w[0][1] + " " + w[0][2]
-else:
-    csv_writer.writerow([str(num_kw) + " most common trigrams"] + [w[0][0] + " " + w[0][1] + " " + w[0][2]
-    for w in trigrams_fd.most_common(num_kw)])
-
-if SELECTIVITY:
-    # Now, store the entries from bigrams_fd to compute selectivity results.
-    degree = {}
-    strength = {}
-
-    # current form: co-occurrence, weighted and undirected
-    most_common = bigrams_fd.most_common()
-    for ((a, b), c) in most_common:
-        if not a in degree.keys():
-            degree[a] = 0
-        if not a in strength.keys():
-            strength[a] = 0
-        if not b in degree.keys():
-            degree[b] = 0
-        if not b in strength.keys():
-            strength[b] = 0
-        degree[a] += 1
-        degree[b] += 1
-        strength[a] += c
-        strength[b] += c
-
-    # calculate selctivity for each word
-    selectivity = []
-    for w in degree.keys():
-        selectivity.append((float(strength[w]) / degree[w], w))
-
-    # Result extraction:
-
-    selectivity.sort()
-    selectivity.reverse()
+        nouns = [w[0] for w in words_tagged if w[1] == 'NOUN']
+        nouns_fd = nltk.FreqDist(nouns)
+    if not write_file:
+        if NOUN:
+            print "\n" + str(num_kw) + " most common nouns:"
+            # print len(nouns_fd)
+            for w in nouns_fd.most_common(num_kw):
+                # w has form (5, 5)
+                print w[0]
+    else:
+        csv_writer.writerow([str(num_kw) + " most common nouns"] + [w[0]
+        for w in nouns_fd.most_common(num_kw)])
 
     if not write_file:
-        print "\n" + str(num_kw) + " best selectivity scores:"
-        # print len(selectivity)
-        for (n, s) in selectivity[:num_kw]:
-            print s + " : " + str(n)
+        if BIGRAM:
+            print "\n" + str(num_kw) + " most common bigrams:"
+            # print len(bigrams_fd)
+            for w in bigrams_fd.most_common(num_kw):
+                # w has for ((5,5),5)
+                print w[0][0] + " " + w[0][1]
     else:
-        csv_writer.writerow([str(num_kw) + " best selectivity scores"] + [s + " : " + str(n)
-        for (n, s) in selectivity[:num_kw]])
+        csv_writer.writerow([str(num_kw) + " most common bigrams"] + [w[0][0] + " " + w[0][1]
+        for w in bigrams_fd.most_common(num_kw)])
 
-if TFIDF:
-    print 'Calculating top ' + str(num_kw) + ' best TF-IDF scores:\n'
-    for (weight, word) in tf_idf(tweets, num_kw):
-        print word + ' : ' + str(weight)
+    if not write_file:
+        if TRIGRAM:
+            print "\n" + str(num_kw) + " most common trigrams:"
+            # print len(trigrams_fd)
+            for w in trigrams_fd.most_common(num_kw):
+                print w[0][0] + " " + w[0][1] + " " + w[0][2]
+    else:
+        csv_writer.writerow([str(num_kw) + " most common trigrams"] + [w[0][0] + " " + w[0][1] + " " + w[0][2]
+        for w in trigrams_fd.most_common(num_kw)])
+
+    if SELECTIVITY:
+        # Now, store the entries from bigrams_fd to compute selectivity results.
+        degree = {}
+        strength = {}
+
+        # current form: co-occurrence, weighted and undirected
+        most_common = bigrams_fd.most_common()
+        for ((a, b), c) in most_common:
+            if not a in degree.keys():
+                degree[a] = 0
+            if not a in strength.keys():
+                strength[a] = 0
+            if not b in degree.keys():
+                degree[b] = 0
+            if not b in strength.keys():
+                strength[b] = 0
+            degree[a] += 1
+            degree[b] += 1
+            strength[a] += c
+            strength[b] += c
+
+        # calculate selctivity for each word
+        selectivity = []
+        for w in degree.keys():
+            selectivity.append((float(strength[w]) / degree[w], w))
+
+        # Result extraction:
+
+        selectivity.sort()
+        selectivity.reverse()
+
+        if not write_file:
+            print "\n" + str(num_kw) + " best selectivity scores:"
+            # print len(selectivity)
+            for (n, s) in selectivity[:num_kw]:
+                print s + " : " + str(n)
+        else:
+            csv_writer.writerow([str(num_kw) + " best selectivity scores"] + [s + " : " + str(n)
+            for (n, s) in selectivity[:num_kw]])
+
+    if TFIDF:
+        print 'Calculating top ' + str(num_kw) + ' best TF-IDF scores:\n'
+        for (weight, word) in tf_idf(tweets, num_kw):
+            print word + ' : ' + str(weight)
