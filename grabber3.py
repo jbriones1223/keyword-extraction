@@ -5,15 +5,16 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
 import re
 import math
+import argparse
 
 #==============================================================================#
 # Globals
 #==============================================================================#
 NOUN = False
-GRAMS = False
-UNIGRAM = False
-BIGRAM = False
-TRIGRAM = False
+GRAMS = True
+UNIGRAM = True
+BIGRAM = True
+TRIGRAM = True
 SELECTIVITY = False
 TFIDF = True
 
@@ -22,10 +23,15 @@ TFIDF = True
 #==============================================================================#
 # Given the name of the CSV file, return a list of the tweets it contains
 def get_tweets(file_name):
-    read_file = codecs.open(file_name, 'rb', 'utf-8')
+    read_file = codecs.open(file_name, 'rb')
     reader = csv.reader(read_file)
-    reader.next()
-    return map(str.lower, reader.next()[1:])
+#   reader.next()
+#   return map(str.lower, reader.next()[1:])
+#   return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
+    tweets = []
+    for row in reader:
+        tweets.append(row[2].decode('utf-8').lower())
+    return tweets
 
 # Given a list of tweets, break each tweet into sentences and return a list of
 # all sentences.
@@ -162,22 +168,27 @@ def tf_idf(tweet_list, num_kw):
 
 if __name__ == "__main__":
 # Get the name of the CSV file containing the tweets
-    file_name = raw_input("Enter file name: ")
-    if not file_name: file_name = "../june_5/ca_j5_remote.csv"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('readfile', help='name of dataset to analyze')
+    parser.add_argument('-n', help='number of results to return', type=int, default=25)
+    parser.add_argument('--save', dest='savefile', help='file to save results')
+    parser.add_argument('-uni', action='store_true', help='return unigram analysis')
+    parser.add_argument('-bi', action='store_true', help='return bigram analysis')
+    parser.add_argument('-tri', action='store_true', help='return trigram analysis')
+    parser.add_argument('-noun', action='store_true', help='return noun frequency analysis')
+    parser.add_argument('-sel', action='store_true', help='return selectivity analysis')
+    parser.add_argument('-tfidf', action='store_true', help='return TF-IDF analysis')
+    args = parser.parse_args()
 
 # Decide between saving results and printing results
-    save_results = raw_input("Would you like to save the results? [y/n]: ")
-    write_file = False
     write_handle = 0
     csv_writer = 0
-    if save_results == "y":
-        write_file = True
-        write_file_name = raw_input("Specify the file for writing: ")
-        write_handle = codecs.open(write_file_name, 'wb', 'utf-8')
+    if args.savefile:
+        write_handle = codecs.open(args.savefile, 'wb', 'utf-8')
         csv_writer = csv.writer(write_handle)
 
 # Get the tweets
-    tweets = get_tweets(file_name)
+    tweets = get_tweets(args.readfile)
 
 # remove hashtags, URLs, and mentions here
 #               Note: these can easily be condensed into one regular expression,
@@ -201,7 +212,7 @@ if __name__ == "__main__":
 
 # Let user define some of their own stop words
     print("Enter any additional stop words, one at a time. Press enter \
-    when you are finished. Limit to n-grams with n at most 3. ")
+ when you are finished. Limit to n-grams with n at most 3. ")
     while (True):
         new_word = raw_input("Add a stop word: ")
         if not new_word:
@@ -241,93 +252,90 @@ if __name__ == "__main__":
     print 'Removing stop phrases'
     tweets = remove_stops(tweets, stop_words)
 
-    if GRAMS:
-        # Parse the tweets into sentences
-        sents = get_sents(tweets)
+    # Parse the tweets into sentences
+    sents = get_sents(tweets)
 
-        # Parse each sentence into words.
-        words = [word_tokenize(s) for s in sents]
+    # Parse each sentence into words.
+    words = [word_tokenize(s) for s in sents]
 
-        # Create list for POS-tagged words
-        words_tagged = []
+    # Create list for POS-tagged words
+    words_tagged = []
 
-        for i in range(len(words)):
-            # Perform POS tagging
-            tagged = nltk.pos_tag(words[i], tagset='universal')
-            # Remove punctuation and numbers
-            # TODO: fix punctuation. it seems like the unicode apostrophe gets through
-            #       the filter, even though the ' character is successfully removed.
-            words[i] = [w[0] for w in tagged if not w[1] in removal]
-            words_tagged += [w for w in tagged if not w[1] in removal]
+    for i in range(len(words)):
+        # Perform POS tagging
+        tagged = nltk.pos_tag(words[i], tagset='universal')
+        # Remove punctuation and numbers
+        # TODO: fix punctuation. it seems like the unicode apostrophe gets through
+        #       the filter, even though the ' character is successfully removed.
+        words[i] = [w[0] for w in tagged if not w[1] in removal]
+        words_tagged += [w for w in tagged if not w[1] in removal]
 
-        # Sort the text into n-grams, one sentence at a time.
-        ngrams = []
-        for sentence in words:
-            # unigrams, bigrams, and trigrams - change max_len to get more or less.
-            ngrams += list(nltk.everygrams(sentence, max_len = 3))
+    # Sort the text into n-grams, one sentence at a time.
+    ngrams = []
+    for sentence in words:
+        # unigrams, bigrams, and trigrams - change max_len to get more or less.
+        ngrams += list(nltk.everygrams(sentence, max_len = 3))
 
-        # ngrams includes all types of n-grams. get lists for each type as well.
-        unigrams = [n for n in ngrams if len(n) == 1]
-        bigrams = [n for n in ngrams if len(n) == 2 and not n[0][0] + " " + n[1][0] in track_words]
-        trigrams = [n for n in ngrams if len(n) == 3 and not n[0][0] + " " + n[1][0] + " " + n[2][0] in track_words]
+    # ngrams includes all types of n-grams. get lists for each type as well.
+    unigrams = [n for n in ngrams if len(n) == 1]
+    bigrams = [n for n in ngrams if len(n) == 2 and not n[0][0] + " " + n[1][0] in track_words]
+    trigrams = [n for n in ngrams if len(n) == 3 and not n[0][0] + " " + n[1][0] + " " + n[2][0] in track_words]
 
-        # Get the frequency distribution of each
-        ngrams_fd = nltk.FreqDist(ngrams)
-        unigrams_fd = nltk.FreqDist(unigrams)
-        bigrams_fd = nltk.FreqDist(bigrams)
-        trigrams_fd = nltk.FreqDist(trigrams)
+    # Get the frequency distribution of each
+    unigrams_fd = nltk.FreqDist(unigrams)
+    bigrams_fd = nltk.FreqDist(bigrams)
+    trigrams_fd = nltk.FreqDist(trigrams)
 
 # set the number of keywords to extract from each method
-    num_kw = int(raw_input("Enter desired number of keywords for each type: "))
+    num_kw = args.n
 
 # Get the most common of each:
-    if not write_file:
-        if UNIGRAM:
+    if args.uni:
+        if not args.savefile:
             print str(num_kw) + " most common unigrams:"
             # print len(unigrams_fd)
             for w in unigrams_fd.most_common(num_kw):
                 # w has the form ((5,),5)
                 print w[0][0]
-    else:
-        csv_writer.writerow([str(num_kw) + " most common unigrams"] + [w[0][0]
-        for w in unigrams_fd.most_common(num_kw)])
+        else:
+            csv_writer.writerow([str(num_kw) + " most common unigrams"] + [w[0][0]
+            for w in unigrams_fd.most_common(num_kw)])
 
-    if NOUN:
+    if args.noun:
         nouns = [w[0] for w in words_tagged if w[1] == 'NOUN']
         nouns_fd = nltk.FreqDist(nouns)
-    if not write_file:
-        if NOUN:
+        if not args.savefile:
             print "\n" + str(num_kw) + " most common nouns:"
             # print len(nouns_fd)
             for w in nouns_fd.most_common(num_kw):
                 # w has form (5, 5)
                 print w[0]
-    else:
-        csv_writer.writerow([str(num_kw) + " most common nouns"] + [w[0]
-        for w in nouns_fd.most_common(num_kw)])
+        else:
+            csv_writer.writerow([str(num_kw) + " most common nouns"] + [w[0]
+            for w in nouns_fd.most_common(num_kw)])
 
-    if not write_file:
-        if BIGRAM:
+    if args.bi:
+        if not args.savefile:
             print "\n" + str(num_kw) + " most common bigrams:"
             # print len(bigrams_fd)
             for w in bigrams_fd.most_common(num_kw):
                 # w has for ((5,5),5)
                 print w[0][0] + " " + w[0][1]
-    else:
-        csv_writer.writerow([str(num_kw) + " most common bigrams"] + [w[0][0] + " " + w[0][1]
-        for w in bigrams_fd.most_common(num_kw)])
+        else:
+            csv_writer.writerow([str(num_kw) + " most common bigrams"] + [w[0][0] + " " + w[0][1]
+            for w in bigrams_fd.most_common(num_kw)])
 
-    if not write_file:
-        if TRIGRAM:
+    if args.tri:
+        if not args.savefile:
             print "\n" + str(num_kw) + " most common trigrams:"
             # print len(trigrams_fd)
             for w in trigrams_fd.most_common(num_kw):
                 print w[0][0] + " " + w[0][1] + " " + w[0][2]
-    else:
-        csv_writer.writerow([str(num_kw) + " most common trigrams"] + [w[0][0] + " " + w[0][1] + " " + w[0][2]
-        for w in trigrams_fd.most_common(num_kw)])
+        else:
+            csv_writer.writerow([str(num_kw) + " most common trigrams"] + [w[0][0] + " " + w[0][1] + " " + w[0][2]
+            for w in trigrams_fd.most_common(num_kw)])
 
-    if SELECTIVITY:
+    if args.sel:
         # Now, store the entries from bigrams_fd to compute selectivity results.
         degree = {}
         strength = {}
@@ -358,7 +366,7 @@ if __name__ == "__main__":
         selectivity.sort()
         selectivity.reverse()
 
-        if not write_file:
+        if not args.savefile:
             print "\n" + str(num_kw) + " best selectivity scores:"
             # print len(selectivity)
             for (n, s) in selectivity[:num_kw]:
@@ -367,7 +375,7 @@ if __name__ == "__main__":
             csv_writer.writerow([str(num_kw) + " best selectivity scores"] + [s + " : " + str(n)
             for (n, s) in selectivity[:num_kw]])
 
-    if TFIDF:
+    if args.tfidf:
         print 'Calculating top ' + str(num_kw) + ' best TF-IDF scores:\n'
         for (weight, word) in tf_idf(tweets, num_kw):
             print word + ' : ' + str(weight)
