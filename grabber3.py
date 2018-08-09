@@ -6,17 +6,8 @@ from nltk.corpus import stopwords
 import re
 import math
 import argparse
-
-#==============================================================================#
-# Globals
-#==============================================================================#
-NOUN = False
-GRAMS = True
-UNIGRAM = True
-BIGRAM = True
-TRIGRAM = True
-SELECTIVITY = False
-TFIDF = True
+from nltk.stem.snowball import SnowballStemmer
+import sys
 
 #==============================================================================#
 # Function Definitions
@@ -30,7 +21,7 @@ def get_tweets(file_name):
 #   return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
     tweets = []
     for row in reader:
-        tweets.append(row[2].decode('utf-8').lower())
+        tweets.append(' ' + row[2].decode('utf-8').lower())
     return tweets
 
 # Given a list of tweets, break each tweet into sentences and return a list of
@@ -58,6 +49,8 @@ def remove_stops(sentences, stops):
     tristops = [stop for stop in stops if len(stop.split()) == 3]
     sorted_stops = [tristops, bistops, unistops]
     rgxs = []
+    # Remove words shorter than 3 letters.
+    rgxs.append(re.compile('\\W\\w{,2}(?=\\W)'))
     for stoplist in sorted_stops:
         for stop in stoplist:
             rgxs.append(re.compile('\\W' + '\\W+'.join(stop.split()) + '(?=\\W)'))
@@ -121,7 +114,10 @@ def get_tf(tweet_list, vocab_set, term_counts):
         # This is the standard calculation, but there are other formulas:
         # https://en.wikipedia.org/wiki/Tf-idf#Term-frequency
         for word in df:
-            df[word] /= term_counts[i]
+            if term_counts[i] == 0:
+                df[word] = 0
+            else:
+                df[word] /= term_counts[i]
         tf.append(df)
 
     return tf
@@ -134,12 +130,14 @@ def get_weights(tf, idf):
 
 # Given a list of term frequency dictionaries, return a dictionary containing
 # each word's total weight.
+# NOTE: Changed this to max instead of sum, in hopes of better data.
 def get_totals(weights):
     totals = {}
     for doc in weights:
         for word in doc:
             if word in totals:
-                totals[word] += doc[word]
+                # totals[word] += doc[word]
+                totals[word] = max(totals[word], doc[word])
             else:
                 totals[word] = doc[word]
 
@@ -155,7 +153,8 @@ def tf_idf(tweet_list, num_kw):
     tf = get_tf(tweet_list, vocab_set, term_counts)
     weights = get_weights(tf, idf)
     totals = get_totals(weights)
-    totals = [(totals[word], word) for word in totals]
+    # Note: easy to filter out short words
+    totals = [(totals[word], word) for word in totals if len(word) >= 3]
     totals.sort()
     totals.reverse()
     return totals[:num_kw]
@@ -255,12 +254,15 @@ if __name__ == "__main__":
     # Parse the tweets into sentences
     sents = get_sents(tweets)
 
-    # Parse each sentence into words.
-    words = [word_tokenize(s) for s in sents]
+    # Parse each sentence into stemmed words.
+    stemmer = SnowballStemmer('english')
+    # words = [word_tokenize(s) for s in sents]
+    words = [[stemmer.stem(w) for w in word_tokenize(s)] for s in sents]
 
     # Create list for POS-tagged words
     words_tagged = []
 
+    print 'Performing POS tagging'
     for i in range(len(words)):
         # Perform POS tagging
         tagged = nltk.pos_tag(words[i], tagset='universal')
@@ -271,6 +273,7 @@ if __name__ == "__main__":
         words_tagged += [w for w in tagged if not w[1] in removal]
 
     # Sort the text into n-grams, one sentence at a time.
+    print 'Computing n-grams'
     ngrams = []
     for sentence in words:
         # unigrams, bigrams, and trigrams - change max_len to get more or less.
@@ -336,6 +339,7 @@ if __name__ == "__main__":
             for w in trigrams_fd.most_common(num_kw)])
 
     if args.sel:
+        print 'Computing selectivity'
         # Now, store the entries from bigrams_fd to compute selectivity results.
         degree = {}
         strength = {}
@@ -372,10 +376,17 @@ if __name__ == "__main__":
             for (n, s) in selectivity[:num_kw]:
                 print s + " : " + str(n)
         else:
-            csv_writer.writerow([str(num_kw) + " best selectivity scores"] + [s + " : " + str(n)
-            for (n, s) in selectivity[:num_kw]])
+            csv_writer.writerow([str(num_kw) + " best selectivity scores"] + [s.encode('ascii', 'ignore') +
+            " : " + str(n) for (n, s) in selectivity[:num_kw]])
 
     if args.tfidf:
-        print 'Calculating top ' + str(num_kw) + ' best TF-IDF scores:\n'
-        for (weight, word) in tf_idf(tweets, num_kw):
-            print word + ' : ' + str(weight)
+        sys.stdout.write('Calculating top ' + str(num_kw) + ' best TF-IDF scores...')
+        sys.stdout.flush()
+        tfidf_res = tf_idf(tweets, num_kw)
+        print ' DONE'
+        if not args.savefile:
+            for (weight, word) in tfidf_res:
+                print word + ' : ' + str(weight)
+        else:
+            csv_writer.writerow([str(num_kw) + " best TF-IDF scores"] + [word + ' : ' + str(weight)
+            for (weight, word) in tfidf_res])
