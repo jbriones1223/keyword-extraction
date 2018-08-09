@@ -105,20 +105,18 @@ def get_idf(tweet_list, vocab_set):
 # Given a list of tweets, a vocabulary set, and a list of how many terms are in 
 # each tweet, compute each term frequency for each tweet, and return it as a a
 # list of dictionaries.
+# Change: only store max term frequency encountered
 def get_tf(tweet_list, vocab_set, term_counts):
-    tf = []
-    for i in range(len(tweet_list)):
-        df = {}
-        for word in vocab_set:
-            df[word] = float(tweet_list[i].count(word))
+    tf = dict([(word, 0.) for word in vocab_set])
+    for i in range(len(tweet_list)): # for each tweet:
+        if term_counts[i] == 0:
+            continue
+        for word in vocab_set: # for each word:
+            word_count = float(tweet_list[i].count(word))
+            freq = word_count / term_counts[i]
+            tf[word] = max(tf[word], freq)
         # This is the standard calculation, but there are other formulas:
         # https://en.wikipedia.org/wiki/Tf-idf#Term-frequency
-        for word in df:
-            if term_counts[i] == 0:
-                df[word] = 0
-            else:
-                df[word] /= term_counts[i]
-        tf.append(df)
 
     return tf
 
@@ -145,19 +143,18 @@ def get_totals(weights):
 
 # Given a list of tweets and a desired number of results, return a list of the
 # highest scoring vocabulary words, using TF-IDF
-# FIXME: This function ```works as intended''', but the results are unhelpful.
-#        Consider changing the scoring methods.
 def tf_idf(tweet_list, num_kw):
     vocab_set, term_counts = get_vocab(tweet_list)
-    idf = get_idf(tweet_list, vocab_set)
-    tf = get_tf(tweet_list, vocab_set, term_counts)
-    weights = get_weights(tf, idf)
-    totals = get_totals(weights)
+    idf = get_idf(tweet_list, vocab_set) # get dict mapping words to idf scores
+    tf = get_tf(tweet_list, vocab_set, term_counts) # dict, words -> max tf
+    # weights = get_weights(tf, idf)
+    # totals = get_totals(weights)
+    scores = [(tf[word] * idf[word], word) for word in vocab_set if word in tf and word in idf]
     # Note: easy to filter out short words
-    totals = [(totals[word], word) for word in totals if len(word) >= 3]
-    totals.sort()
-    totals.reverse()
-    return totals[:num_kw]
+    # totals = [(totals[word], word) for word in totals if len(word) >= 3]
+    scores.sort()
+    scores.reverse()
+    return scores[:num_kw]
 
 #==============================================================================#
 # File I/O
