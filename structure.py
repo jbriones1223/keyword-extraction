@@ -35,6 +35,7 @@ def process_tweets(tweets):
 def find_phrases(tweet, search):
     locations = {}
     l = len(tweet)
+    if not l: return {}
     for term in search:
         # split search term into separate words, and store the length.
         wl = term.lower().split()
@@ -62,7 +63,19 @@ def find_phrases(tweet, search):
 # locations, return a dictionary mapping contexts to the number of times they
 # appeared in the tweet. Each context is represented as list of words.
 def find_contexts(tweet, locs, size):
-    return 0
+    l = len(tweet)
+    if not l: return {}
+    contexts = {}
+    for length in locs:
+        for loc in locs[length]:
+            c1 = tweet[max(0, loc - size) : loc]
+            c2 = tweet[loc + length : loc + length + size]
+            # c is the context
+            c = c1 + c2
+            if c not in contexts:
+                contexts[c] = 0
+            contexts[c] += 1
+    return contexts
 
 # The simplest method, more to come. This first finds which phrases frequently
 # occur around keywords, and stores them. Next, it finds which other words also
