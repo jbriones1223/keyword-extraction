@@ -71,11 +71,42 @@ def find_contexts(tweet, locs, size):
             c1 = tweet[max(0, loc - size) : loc]
             c2 = tweet[loc + length : loc + length + size]
             # c is the context
-            c = c1 + c2
+            c = c1 + [''] + c2
             if c not in contexts:
                 contexts[c] = 0
             contexts[c] += 1
     return contexts
+
+def get_scores(processed_tweets, search_phrases, contexts, max_size = 3, min_size = 3):
+    scores = {}
+    if min_size < 1 or max_size < 1:
+        raise ValueError('invalid min_size or max_size value')
+    for tweet in processed_tweets:
+        for c in contexts:
+            l = len(c) - 1
+            if l < 1:
+                continue
+            try:
+                b = c.index('')
+            except ValueError:
+                continue
+            first = c[:b]
+            last = c[b+1:]
+            starts = find_phrases(tweet, [' '.join(first)])[b]
+            starts = [s + b for s in starts]
+            ends = find_phrases(tweet, [' '.join(last)])[l-b]
+            for s in starts:
+                for i in range(min_size, max_size + 1):
+                    if s + i in ends:
+                        p = tweet[s : s + i]
+                        if p not in scores:
+                            scores[p] = 0
+                        # TODO: change to scoring by frequency of context?
+                        scores[p] += 1
+    return scores
+
+def filter_results(scores):
+    return scores
 
 # The simplest method, more to come. This first finds which phrases frequently
 # occur around keywords, and stores them. Next, it finds which other words also
@@ -100,10 +131,12 @@ def find_keywords_basic(processed_tweets, search_phrases, num_kw, size = 2):
                 contexts[c] += context[c]
             else:
                 contexts[c] = context[c]
-    # get a list of tuples, each containing a word and its score
-    scores = get_scores(processed_tweets, search_phrases, contexts, max_size=3)
-    scores.sort(key=lambda x: -1 * x[1])
-    return scores[:num_kw]
+    # get a dictionary mapping phrases to scores
+    scores = get_scores(processed_tweets, search_phrases, contexts)
+    scores = filter_results(scores)
+    sc_tup = [(' '.join(keyphrase), scores[keyphrase]) for keyphrase in scores]
+    sc_tup.sort(key=lambda x: -1 * x[1])
+    return sc_tup[:num_kw]
 
 # Given a list of tweets, parse each tweet into sentences, and return the list
 # of all sentences. Note that this list is 1D, as opposed to a 2D list of lists.
@@ -134,7 +167,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', help='number of results to return', type=int, default=25)
     parser.add_argument('--save', dest='savefile', help='file to save results')
     parser.add_argument('-r', action='store_true', help='remove stop words for the algorithm')
-    parser.add_argument('-c', action='store_true', help='complicate things. use this option to see whatever algorithm is in progress.'
+    parser.add_argument('-c', action='store_true', help='complicate things. use this option to see whatever algorithm is in progress. not currently implemented')
     args = parser.parse_args()
 
     tweets = get_tweets(args.readfile)
@@ -149,9 +182,11 @@ if __name__ == "__main__":
 
     processed = process_tweets(tweets)
 
-    if args.r:
+    if args.c:
         print "I haven't done this yet. But the next idea will involve " + \
         "computing similarity scores, as opposed to requiring exact matches"
         raise SystemExit
     else:
         results = find_keywords_basic(tweets, search_phrases, args.n)
+
+        print results
