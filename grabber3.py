@@ -34,7 +34,22 @@ def get_sents(tweets):
 
 # Given a list of regular expressions to filter out and a list of sentences,
 # remove all matching instances from the sentences. Return the result.
-def re_filter(sentence_list, re_list):
+def re_filter(sentence_list):
+#               Note: these can easily be condensed into one regular expression,
+#               but for now I will leave them separate for easy testing purposes
+    mention_form = re.compile('@\\S+')
+    url_form = re.compile('http\\S+')
+    hashtag_form = re.compile('#\\S+')
+# https://stackoverflow.com/a/33417311
+# TODO: this doesn't work right now, I'm not sure why. will do some digging.
+# emoji_form = re.compile("["
+#         u"\U0001F600-\U0001F64F"  # emoticons
+#         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+#         u"\U0001F680-\U0001F6FF"  # transport & map symbols
+#         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+#                            "]+", flags=re.UNICODE | re.VERBOSE)
+    re_list = [mention_form, url_form, hashtag_form]
+
     for i in range(len(sentence_list)):
         for rgx in re_list:
             sentence_list[i] = rgx.sub("", sentence_list[i])
@@ -187,21 +202,7 @@ if __name__ == "__main__":
     tweets = get_tweets(args.readfile)
 
 # remove hashtags, URLs, and mentions here
-#               Note: these can easily be condensed into one regular expression,
-#               but for now I will leave them separate for easy testing purposes
-    mention_form = re.compile('@\\S+')
-    url_form = re.compile('http\\S+')
-    hashtag_form = re.compile('#\\S+')
-# https://stackoverflow.com/a/33417311
-# TODO: this doesn't work right now, I'm not sure why. will do some digging.
-# emoji_form = re.compile("["
-#         u"\U0001F600-\U0001F64F"  # emoticons
-#         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-#         u"\U0001F680-\U0001F6FF"  # transport & map symbols
-#         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-#                            "]+", flags=re.UNICODE | re.VERBOSE)
-
-    tweets = re_filter(tweets, [mention_form, url_form, hashtag_form])
+    tweets = re_filter(tweets)
 
 # Introduce default stopwords
     stop_words = set(stopwords.words('english'))
