@@ -27,6 +27,7 @@ def get_tweets(file_name):
 
 def clean(tweet, stop, exclude, lemma):
     stop_free = " ".join([i for i in tweet.lower().split() if i not in stop])
+    # TODO: I don't think this works as it should. this wouldn't find 
     punc_free = ''.join([ch for ch in stop_free if ch not in exclude])
     normalized = " ".join([lemma.lemmatize(word) for word in punc_free.split()])
 
