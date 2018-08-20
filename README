@@ -5,7 +5,7 @@ Alvarez
 
 FILES:
 grabber.py - 
-    Basic script to pull text from a file which is specified at compile time.
+    Basic script to pull text from a file which is specified inside the code.
     This script implements two basic keyword extraction methods: POS tagging and
     selectivity. The POS tagging approach selects the most frequent nouns, while
     the selectivity approach chooses words based on adjacency within a sentence.
@@ -51,3 +51,7 @@ MOVING FORWARD:
     - deal with parentheticals in a sentence (possibly split it into two
         different sentences?
     - implement other approaches, now that the basics are implemented
+
+
+R expressions:
+dfraud <- dat$full_content[which(dat$fraud)]
