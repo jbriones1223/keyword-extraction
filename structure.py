@@ -77,7 +77,7 @@ def find_contexts(tweet, locs, size):
             contexts[c] += 1
     return contexts
 
-def get_scores(processed_tweets, search_phrases, contexts, max_size = 3, min_size = 3):
+def get_scores(processed_tweets, search_phrases, contexts, max_size = 3, min_size = 2):
     scores = {}
     if min_size < 1 or max_size < 1:
         raise ValueError('invalid min_size or max_size value')
@@ -103,6 +103,7 @@ def get_scores(processed_tweets, search_phrases, contexts, max_size = 3, min_siz
                             scores[p] = 0
                         # TODO: change to scoring by frequency of context?
                         scores[p] += 1
+                        print 'incremented a word in scores'
     return scores
 
 def filter_results(scores):
@@ -118,19 +119,24 @@ def find_keywords_basic(processed_tweets, search_phrases, num_kw, size = 2):
     if size < 1:
         raise ValueError('size of context must be at least 1')
     contexts = {}
+    i = 0
     for pt in processed_tweets:
+        if i < 10 : print 'tweet ' + str(i) + ': ' + pt
         # Get a dictionary storing locations of all key phrases. Maps each
         # distinct keyphrase length to a list of indices where a first term
         # occurs.
         locations = find_phrases(pt, search_phrases)
+        if i < 10 : print 'length of locations: ' + str(len(locations))
         # find all contexts present and return a dict mapping them to their counts
         context = find_contexts(pt, locations, size)
+        if i < 10 : print 'length of context: ' + str(len(context))
         # update the overall dictionary
         for c in context:
             if c in contexts:
                 contexts[c] += context[c]
             else:
                 contexts[c] = context[c]
+        i += 1
     # get a dictionary mapping phrases to scores
     scores = get_scores(processed_tweets, search_phrases, contexts)
     scores = filter_results(scores)
@@ -156,7 +162,7 @@ def parse_sents(tweets):
 # Note that this will slightly affect preprocessing; having this off will
 # result in a list of tweets, and having this on will result in a list of
 # sentences.
-sent_parse = True
+sent_parse = False
 
 #==============================================================================#
 # Main
@@ -171,16 +177,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tweets = get_tweets(args.readfile)
+    print 'length of tweets: ' + str(len(tweets))
+    print 'first tweet: ' + tweets[0]
 
     # TODO: write a way to pull keywords from a csv file or from the command line
-    search_phrases = ['placeholder']
+    search_phrases = ['provisional ballot', 'voting machine', 'ballot']
 
     if sent_parse:
+        print 'parsing tweets'
         tweets = parse_sents(tweets)
 
     tweets = re_filter(tweets)
+    print 'length of tweets: ' + str(len(tweets))
 
     processed = process_tweets(tweets)
+    print 'length of processed tweets: ' + str(len(processed))
 
     if args.c:
         print "I haven't done this yet. But the next idea will involve " + \

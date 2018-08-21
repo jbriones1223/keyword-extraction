@@ -16,13 +16,13 @@ import sys
 def get_tweets(file_name):
     read_file = codecs.open(file_name, 'rb')
     reader = csv.reader(read_file)
-#   reader.next()
-#   return map(str.lower, reader.next()[1:])
-#   return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
-    tweets = []
-    for row in reader:
-        tweets.append(' ' + row[2].decode('utf-8').lower())
-    return tweets
+    reader.next()
+    return map(str.lower, reader.next()[1:])
+    return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
+#   tweets = []
+#   for row in reader:
+#       tweets.append(' ' + row[2].decode('utf-8').lower())
+#   return tweets
 
 # Given a list of tweets, break each tweet into sentences and return a list of
 # all sentences.
