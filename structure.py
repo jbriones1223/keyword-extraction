@@ -37,6 +37,7 @@ def find_phrases(tweet, search):
     l = len(tweet)
     if not l: return {}
     for term in search:
+        if not term: continue
         # split search term into separate words, and store the length.
         wl = term.lower().split()
         tl = len(wl)
@@ -45,18 +46,28 @@ def find_phrases(tweet, search):
         try:
             while 1:
                 # find the index. this is where a ValueError may be raised.
-                idx = tweet[i + tl:].index(wl[0])
+                try:
+                    idx = tweet[i + tl:].index(wl[0])
+                except IndexError: # NOTE: used for error checking. will remove later
+                    print 'tweet = ' + str(tweet)
+                    print 'wl = ' + str(wl)
+                    print 'tl = ' + str(tl)
+                    print 'i = ' + str(i)
+                    raise IndexError
                 # check if the word actually occurred:
                 if i + 2 * tl + idx <= l and \
                     all([tweet[i + tl + idx + j] == wl[j] for j in range(tl)]):
                     # if it occurred, mark the position and continue searching
                     i += idx + tl
                     locs.append(i)
+                else:
+                    i += idx + 1
         except ValueError:
             if locs:
-                if tl not in locations:
+                if not tl in locations:
                     locations[tl] = []
                 locations[tl] += locs
+            continue
     return locations
 
 # Given a tweet and a dictionary mapping search term lengths to search term
@@ -71,39 +82,46 @@ def find_contexts(tweet, locs, size):
             c1 = tweet[max(0, loc - size) : loc]
             c2 = tweet[loc + length : loc + length + size]
             # c is the context
-            c = c1 + [''] + c2
-            if c not in contexts:
+            # TODO: make sure tweets can't contain <|>
+            c = ' '.join(c1 + ['<|>'] + c2)
+            if not c in contexts:
                 contexts[c] = 0
             contexts[c] += 1
     return contexts
 
-def get_scores(processed_tweets, search_phrases, contexts, max_size = 3, min_size = 2):
+def get_scores(processed_tweets, search_phrases, contexts, min_size, max_size):
     scores = {}
     if min_size < 1 or max_size < 1:
         raise ValueError('invalid min_size or max_size value')
-    for tweet in processed_tweets:
-        for c in contexts:
-            l = len(c) - 1
+    for tweet in processed_tweets: # for each tweet (each is a list of words)
+        for c in contexts: # for each context (each is a single string)
+            pt = c.split()
+            l = len(pt) - 1
             if l < 1:
                 continue
             try:
-                b = c.index('')
+                b = pt.index('<|>')
             except ValueError:
                 continue
-            first = c[:b]
-            last = c[b+1:]
-            starts = find_phrases(tweet, [' '.join(first)])[b]
-            starts = [s + b for s in starts]
-            ends = find_phrases(tweet, [' '.join(last)])[l-b]
+            first = pt[:b]
+            last = pt[b+1:]
+            if not first or not last: continue
+            starts = find_phrases(tweet, [ ' '.join(first) ])
+            ends = find_phrases(tweet, [' '.join(last)])
+            if starts and ends:
+                starts = starts[b]
+                starts = [s + b for s in starts]
+                ends = ends[l-b]
+            else:
+                continue
             for s in starts:
                 for i in range(min_size, max_size + 1):
                     if s + i in ends:
-                        p = tweet[s : s + i]
+                        p = ' '.join(tweet[s : s + i])
                         if p not in scores:
                             scores[p] = 0
                         # TODO: change to scoring by frequency of context?
                         scores[p] += 1
-                        print 'incremented a word in scores'
     return scores
 
 def filter_results(scores):
@@ -115,21 +133,18 @@ def filter_results(scores):
 # a dictionary of every word which has a nonzero score. This dictionary is then
 # passed to a filter to select the words with the best scores, which are then
 # returned.
-def find_keywords_basic(processed_tweets, search_phrases, num_kw, size = 2):
+def find_keywords_basic(processed_tweets, search_phrases, num_kw, size, min_size, max_size):
     if size < 1:
         raise ValueError('size of context must be at least 1')
     contexts = {}
     i = 0
     for pt in processed_tweets:
-        if i < 10 : print 'tweet ' + str(i) + ': ' + pt
         # Get a dictionary storing locations of all key phrases. Maps each
         # distinct keyphrase length to a list of indices where a first term
         # occurs.
         locations = find_phrases(pt, search_phrases)
-        if i < 10 : print 'length of locations: ' + str(len(locations))
         # find all contexts present and return a dict mapping them to their counts
         context = find_contexts(pt, locations, size)
-        if i < 10 : print 'length of context: ' + str(len(context))
         # update the overall dictionary
         for c in context:
             if c in contexts:
@@ -138,9 +153,9 @@ def find_keywords_basic(processed_tweets, search_phrases, num_kw, size = 2):
                 contexts[c] = context[c]
         i += 1
     # get a dictionary mapping phrases to scores
-    scores = get_scores(processed_tweets, search_phrases, contexts)
+    scores = get_scores(processed_tweets, search_phrases, contexts, min_size, max_size)
     scores = filter_results(scores)
-    sc_tup = [(' '.join(keyphrase), scores[keyphrase]) for keyphrase in scores]
+    sc_tup = [(keyphrase, scores[keyphrase]) for keyphrase in scores]
     sc_tup.sort(key=lambda x: -1 * x[1])
     return sc_tup[:num_kw]
 
@@ -174,11 +189,12 @@ if __name__ == "__main__":
     parser.add_argument('--save', dest='savefile', help='file to save results')
     parser.add_argument('-r', action='store_true', help='remove stop words for the algorithm')
     parser.add_argument('-c', action='store_true', help='complicate things. use this option to see whatever algorithm is in progress. not currently implemented')
+    parser.add_argument('-size', help='size of context', type=int, default=2)
+    parser.add_argument('-min', help='min size of results', type=int, default=1)
+    parser.add_argument('-max', help='max size of results', type=int, default=3)
     args = parser.parse_args()
 
     tweets = get_tweets(args.readfile)
-    print 'length of tweets: ' + str(len(tweets))
-    print 'first tweet: ' + tweets[0]
 
     # TODO: write a way to pull keywords from a csv file or from the command line
     search_phrases = ['provisional ballot', 'voting machine', 'ballot']
@@ -188,16 +204,14 @@ if __name__ == "__main__":
         tweets = parse_sents(tweets)
 
     tweets = re_filter(tweets)
-    print 'length of tweets: ' + str(len(tweets))
 
     processed = process_tweets(tweets)
-    print 'length of processed tweets: ' + str(len(processed))
 
     if args.c:
         print "I haven't done this yet. But the next idea will involve " + \
         "computing similarity scores, as opposed to requiring exact matches"
         raise SystemExit
     else:
-        results = find_keywords_basic(tweets, search_phrases, args.n)
+        results = find_keywords_basic(processed, search_phrases, args.n, args.size, args.min, args.max)
 
         print results
