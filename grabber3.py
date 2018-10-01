@@ -16,13 +16,13 @@ import sys
 def get_tweets(file_name):
     read_file = codecs.open(file_name, 'rb')
     reader = csv.reader(read_file)
-#   reader.next()
-#   return map(str.lower, reader.next()[1:])
-#   return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
-    tweets = []
-    for row in reader:
-        tweets.append(' ' + row[2].decode('utf-8').lower())
-    return tweets
+    reader.next()
+    return map(str.lower, reader.next()[1:])
+    return [unicode(row[2], encoding='utf-8', errors='ignore') for row in reader][1:]
+#   tweets = []
+#   for row in reader:
+#       tweets.append(' ' + row[2].decode('utf-8').lower())
+#   return tweets
 
 # Given a list of tweets, break each tweet into sentences and return a list of
 # all sentences.
@@ -34,7 +34,22 @@ def get_sents(tweets):
 
 # Given a list of regular expressions to filter out and a list of sentences,
 # remove all matching instances from the sentences. Return the result.
-def re_filter(sentence_list, re_list):
+def re_filter(sentence_list):
+#               Note: these can easily be condensed into one regular expression,
+#               but for now I will leave them separate for easy testing purposes
+    mention_form = re.compile('@\\S+')
+    url_form = re.compile('http\\S+')
+    hashtag_form = re.compile('#\\S+')
+# https://stackoverflow.com/a/33417311
+# TODO: this doesn't work right now, I'm not sure why. will do some digging.
+# emoji_form = re.compile("["
+#         u"\U0001F600-\U0001F64F"  # emoticons
+#         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+#         u"\U0001F680-\U0001F6FF"  # transport & map symbols
+#         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+#                            "]+", flags=re.UNICODE | re.VERBOSE)
+    re_list = [mention_form, url_form, hashtag_form]
+
     for i in range(len(sentence_list)):
         for rgx in re_list:
             sentence_list[i] = rgx.sub("", sentence_list[i])
@@ -105,20 +120,18 @@ def get_idf(tweet_list, vocab_set):
 # Given a list of tweets, a vocabulary set, and a list of how many terms are in 
 # each tweet, compute each term frequency for each tweet, and return it as a a
 # list of dictionaries.
+# Change: only store max term frequency encountered
 def get_tf(tweet_list, vocab_set, term_counts):
-    tf = []
-    for i in range(len(tweet_list)):
-        df = {}
-        for word in vocab_set:
-            df[word] = float(tweet_list[i].count(word))
+    tf = dict([(word, 0.) for word in vocab_set])
+    for i in range(len(tweet_list)): # for each tweet:
+        if term_counts[i] == 0:
+            continue
+        for word in vocab_set: # for each word:
+            word_count = float(tweet_list[i].count(word))
+            freq = word_count / term_counts[i]
+            tf[word] = max(tf[word], freq)
         # This is the standard calculation, but there are other formulas:
         # https://en.wikipedia.org/wiki/Tf-idf#Term-frequency
-        for word in df:
-            if term_counts[i] == 0:
-                df[word] = 0
-            else:
-                df[word] /= term_counts[i]
-        tf.append(df)
 
     return tf
 
@@ -145,19 +158,18 @@ def get_totals(weights):
 
 # Given a list of tweets and a desired number of results, return a list of the
 # highest scoring vocabulary words, using TF-IDF
-# FIXME: This function ```works as intended''', but the results are unhelpful.
-#        Consider changing the scoring methods.
 def tf_idf(tweet_list, num_kw):
     vocab_set, term_counts = get_vocab(tweet_list)
-    idf = get_idf(tweet_list, vocab_set)
-    tf = get_tf(tweet_list, vocab_set, term_counts)
-    weights = get_weights(tf, idf)
-    totals = get_totals(weights)
+    idf = get_idf(tweet_list, vocab_set) # get dict mapping words to idf scores
+    tf = get_tf(tweet_list, vocab_set, term_counts) # dict, words -> max tf
+    # weights = get_weights(tf, idf)
+    # totals = get_totals(weights)
+    scores = [(tf[word] * idf[word], word) for word in vocab_set if word in tf and word in idf]
     # Note: easy to filter out short words
-    totals = [(totals[word], word) for word in totals if len(word) >= 3]
-    totals.sort()
-    totals.reverse()
-    return totals[:num_kw]
+    # totals = [(totals[word], word) for word in totals if len(word) >= 3]
+    scores.sort()
+    scores.reverse()
+    return scores[:num_kw]
 
 #==============================================================================#
 # File I/O
@@ -190,21 +202,7 @@ if __name__ == "__main__":
     tweets = get_tweets(args.readfile)
 
 # remove hashtags, URLs, and mentions here
-#               Note: these can easily be condensed into one regular expression,
-#               but for now I will leave them separate for easy testing purposes
-    mention_form = re.compile('@\\S+')
-    url_form = re.compile('http\\S+')
-    hashtag_form = re.compile('#\\S+')
-# https://stackoverflow.com/a/33417311
-# TODO: this doesn't work right now, I'm not sure why. will do some digging.
-# emoji_form = re.compile("["
-#         u"\U0001F600-\U0001F64F"  # emoticons
-#         u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-#         u"\U0001F680-\U0001F6FF"  # transport & map symbols
-#         u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-#                            "]+", flags=re.UNICODE | re.VERBOSE)
-
-    tweets = re_filter(tweets, [mention_form, url_form, hashtag_form])
+    tweets = re_filter(tweets)
 
 # Introduce default stopwords
     stop_words = set(stopwords.words('english'))
