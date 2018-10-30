@@ -36,6 +36,9 @@ grabber2.py -
             }
             return(intToUtf8(tweetInt))
         }
+        
+    Note that grabber2_j5.py is the same file, with the main difference being
+    that the initial keywords from the Election Day data set are included.
 
 grabber3.py -
     the most updated version of the previous 2 files
@@ -47,6 +50,22 @@ structure.py -
     through the tweets again, finding which other phrases appear in those
     contexts. Each of these phrases is scored, and the top-scoring phrases are
     returned.
+
+context.py -
+    Work in progress. The basic idea is a complementary n-gram frequency
+    metric. Given a set of phrases, scan through the tweets, finding which
+    `contexts' occur around each phrase. The top n contexts are printed as a
+    result, but it shouldn't be too hard to use this as input for another
+    program.
+
+topic_model.py -
+    This runs an LDA (Latent Dirichlet Allocation) on the set of tweets, and
+    it returns a topic model.
+
+track_changes.py -
+    This analyzes several algorithm outputs to determine how the keywords
+    within the results change over time. In test runs, I ran this with the
+    election day data split chronologically into 5 chunks.
 
 twitter_as_data.txt -
     Section 1 of the Twitter as Data article by Professor Alvarez. Medium-sized
